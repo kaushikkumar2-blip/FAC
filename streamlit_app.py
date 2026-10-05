@@ -13,10 +13,12 @@ st.set_page_config(
     layout="wide",
 )
 
-DATA_PATH = Path(__file__).parent / "6f43030b2b8721b5df58308dc1d05eb8.csv"
+DATA_PATH = Path(__file__).parent / "29df6f2faea1925ee6925c82723fa3e6_csv.csv"
 
 REASON_COLS = [
     "orc",
+    "not_available",
+    "cod_not_ready",
     "ica",
     "osm",
     "untraceable",
@@ -26,11 +28,14 @@ REASON_COLS = [
     "heavy_load",
     "cnr",
     "rfr",
+    "other_reasons",
     "no_status_captured",
 ]
 
 REASON_LABELS = {
     "orc": "ORC",
+    "not_available": "Not available",
+    "cod_not_ready": "COD not ready",
     "ica": "ICA",
     "osm": "OSM",
     "untraceable": "Untraceable",
@@ -40,6 +45,7 @@ REASON_LABELS = {
     "heavy_load": "Heavy load",
     "cnr": "CNR",
     "rfr": "RFR",
+    "other_reasons": "Other reasons",
     "no_status_captured": "No status captured",
 }
 
@@ -127,20 +133,37 @@ def render_trend_table(df: pd.DataFrame) -> None:
 def render_reason_breakdown(df: pd.DataFrame) -> None:
     reason_totals = df[REASON_COLS].sum()
     reason_totals = reason_totals[reason_totals > 0].sort_values(ascending=False)
-    total = reason_totals.sum()
+
+    failed = int(df["fac_deno"].sum() - df["fac_delivered"].sum())
+    unattributed = failed - int(reason_totals.sum())
+
     reason_df = pd.DataFrame(
         {
             "Reason": [REASON_LABELS[r] for r in reason_totals.index],
             "Count": reason_totals.to_numpy(),
         }
     )
-    reason_df["% of undelivered"] = (reason_df["Count"] / total * 100).round(1)
+    if unattributed > 0:
+        reason_df = pd.concat(
+            [
+                reason_df,
+                pd.DataFrame({"Reason": ["Unattributed (no reason logged)"], "Count": [unattributed]}),
+            ],
+            ignore_index=True,
+        )
+    reason_df["% of failed"] = (reason_df["Count"] / failed * 100).round(1) if failed else 0.0
 
     st.dataframe(
         reason_df,
         hide_index=True,
         height=CHART_HEIGHT,
     )
+    if unattributed > 0:
+        st.caption(
+            ":material/info: "
+            f"{unattributed:,} failed shipments have no reason code logged in the source data "
+            "(fac_deno > 0, not delivered, all reason columns 0)."
+        )
 
 
 def render_state_breakdown(df: pd.DataFrame) -> None:
