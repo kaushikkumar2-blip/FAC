@@ -1,0 +1,7 @@
+streamlit_log*.txt
+fac_*.sql
+fac_reason_bucket_mapping.sql
+# old data files — only 5552f9ef... is active
+6f43030b2b8721b5df58308dc1d05eb8.csv
+29df6f2faea1925ee6925c82723fa3e6_csv.csv
+a2c58bab5f07ade91e1a0bec3a16f1dd_csv.csv
